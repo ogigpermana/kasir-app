@@ -17,6 +17,7 @@
 - [x] Role-based redirect (admin/owner/kasir)
 - [x] Onboarding 3 langkah (welcome → nama toko → tipe bisnis)
 - [x] Seed default user `admin` / `admin123`
+- [x] **Session persistent** (Hive) — user tetap login setelah app di-restart/kill
 
 ### Produk & Kategori
 - [x] CRUD produk (nama, barcode, harga beli/jual, stok, min stok)
@@ -32,7 +33,8 @@
 - [x] Grid produk + cart panel
 - [x] Quantity control (+/-) di cart
 - [x] Toggle PPN
-- [x] Pembayaran dengan perhitungan kembalian
+- [x] Pembayaran di halaman terpisah (`/payment`) dengan perhitungan kembalian
+- [x] Setelah bayar → refresh stok & redirect ke POS
 - [x] Tampilan receipt setelah bayar
 
 ### Laporan
@@ -44,7 +46,10 @@
 
 ### Pengaturan & Pengguna
 - [x] User management CRUD (admin/owner/kasir)
-- [x] Role-based navigation (kasir dibatasi)
+- [x] Role-based navigation (kasir: tanpa laporan; admin/owner: ada laporan)
+- [x] Route guard defensif (kasir tidak bisa akses `/report` & `/users` via deep link)
+- [x] Settings kasir: hanya nama + label role + tombol logout
+- [x] Settings admin/owner: manajemen user, pengaturan pajak, logout
 - [x] Konfigurasi persen pajak
 - [x] Logout
 
@@ -65,7 +70,7 @@
 | 🟢 | **Diskon Transaksi** | Field `discount` di entity, UI diskon belum ada |
 | 🟢 | **Payment Method** | Masih hardcoded `'cash'` |
 | 🟢 | **Print Receipt** | Receipt cuma dialog, belum ke thermal printer |
-| 🟢 | **Open File Export** | `open_file` dependency ada, belum dipakai |
+| 🟢 | **Open File Export** | `open_file` dipakai untuk tombol "Buka" di SnackBar export |
 | 🔴 | **Test Coverage** | Hanya 2 test file (entity test + smoke test) |
 | 🔴 | **Reusable Widgets** | `presentation/common/widgets/` kosong |
 | 🔴 | **Error Handling** | Perlu sentralisasi error handler |
@@ -77,7 +82,7 @@
 ```
 lib/
 ├── main.dart
-├── core/                          # Constants, utils, theme
+├── core/                          # Constants, utils, theme, session (Hive), file_saver
 ├── data/
 │   ├── datasources/local/         # Drift database + generated
 │   ├── datasources/remote/        # (kosong)
@@ -87,13 +92,13 @@ lib/
 │   ├── repositories/              # Abstract interfaces
 │   └── usecases/                  # (kosong)
 └── presentation/
-    ├── common/providers/          # Riverpod providers
+    ├── common/providers/          # Riverpod providers (auth, currentUser, cart, dll)
     ├── common/widgets/            # (kosong)
     ├── features/
     │   ├── auth/                  # LoginPage
     │   ├── onboarding/            # OnboardingPage
     │   ├── product/               # ProductListPage, CategoryPage, StockPage
-    │   ├── transaction/           # PosPage, ReceiptDialog
+    │   ├── transaction/           # PosPage, PaymentPage, ReceiptDialog
     │   ├── report/                # ReportPage
     │   └── settings/              # SettingsPage, UserManagementPage
     └── router.dart
@@ -125,8 +130,13 @@ lib/
 | 2026-07-14 | produk: child pake choice chip | Child kategori tampil sebagai chip yang bisa dipilih, bukan dropdown |
 | 2026-07-14 | laporan: simpan ke Documents publik | Export PDF/CSV kini disimpan ke folder Documents hape (luar container app) via MediaStore + MethodChannel. SnackBar ada tombol "Buka" |
 | 2026-07-14 | produk: fix bug logika edit | initState deteksi parent vs child kategori dengan benar saat edit produk |
+| 2026-07-15 | produk: fix buildCategoryTree | Child kategori tidak muncul karena parent masuk roots sebelum child dicantolkan; sekarang roots diambil dari map setelah semua child ter-attach |
+| 2026-07-15 | produk: chip untuk parent tanpa child | Parent tanpa sub-kategori tetap muncul sebagai chip & auto-fill nama produk |
+| 2026-07-15 | transaksi: halaman bayar terpisah | Popup bayar diganti halaman `/payment` (anti keyboard overflow); setelah selesai redirect ke POS + refresh stok |
+| 2026-07-15 | role: route guard + menu owner | Kasir tidak bisa akses `/report` & `/users`; owner/admin lihat tab Laporan; MainShell pakai watch(currentUserProvider) |
+| 2026-07-15 | auth: session persistent (Hive) | userId disimpan di Hive; app tetap login setelah restart/kill; restoreSession lazy via currentUserProvider |
 
 ---
 
-> **Last updated**: 2026-07-14
+> **Last updated**: 2026-07-15
 > **Guide**: Setiap ada penambahan fitur/patch, file ini akan diupdate.
