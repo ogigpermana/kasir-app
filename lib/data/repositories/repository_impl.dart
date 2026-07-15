@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:kasir_app/core/password_utils.dart';
+import 'package:kasir_app/core/session.dart';
 import 'package:kasir_app/data/datasources/local/drift_database.dart';
 import 'package:kasir_app/domain/entities/product.dart';
 import 'package:kasir_app/domain/entities/category.dart';
@@ -25,10 +26,25 @@ class RepositoryImpl implements ProductRepository, TransactionRepository {
     if (user == null || !user.isActive) return false;
     if (!verifyPassword(password, user.password)) return false;
     _currentUser = UserData(id: user.id, username: user.username, displayName: user.displayName, role: user.role, isActive: user.isActive);
+    await Session.saveUserId(user.id);
     return true;
   }
 
-  void logout() => _currentUser = null;
+  Future<void> restoreSession() async {
+    final userId = Session.userId;
+    if (userId == null) return;
+    final user = await (_db.select(_db.usersTable)..where((t) => t.id.equals(userId))).getSingleOrNull();
+    if (user != null && user.isActive) {
+      _currentUser = UserData(id: user.id, username: user.username, displayName: user.displayName, role: user.role, isActive: user.isActive);
+    } else {
+      await Session.clear();
+    }
+  }
+
+  void logout() {
+    _currentUser = null;
+    Session.clear();
+  }
 
   bool hasPermission(List<String> roles) => _currentUser != null && roles.contains(_currentUser!.role);
 

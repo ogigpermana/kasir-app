@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kasir_app/core/session.dart';
 import 'package:kasir_app/data/datasources/local/drift_database.dart';
 import 'package:kasir_app/data/repositories/repository_impl.dart';
 import 'package:kasir_app/domain/entities/product.dart';
@@ -58,7 +59,7 @@ final authProvider = NotifierProvider<AuthNotifier, bool>(AuthNotifier.new);
 
 class AuthNotifier extends Notifier<bool> {
   @override
-  bool build() => false;
+  bool build() => Session.userId != null;
 
   Future<String?> login(String username, String password) async {
     try {
@@ -83,7 +84,11 @@ class AuthNotifier extends Notifier<bool> {
 final currentUserProvider = FutureProvider<UserData?>((ref) async {
   final isLoggedIn = ref.watch(authProvider);
   if (!isLoggedIn) return null;
-  return ref.read(repositoryProvider).currentUser;
+  final repo = ref.read(repositoryProvider);
+  if (repo.currentUser == null) {
+    await repo.restoreSession();
+  }
+  return repo.currentUser;
 });
 
 final productListProvider = FutureProvider<List<Product>>((ref) async {
